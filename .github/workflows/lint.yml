@@ -1,0 +1,207 @@
+name: lint
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: detect file types
+    runs-on: ubuntu-latest
+    outputs:
+      has_md:   ${{ steps.detect.outputs.has_md }}
+      has_sh:   ${{ steps.detect.outputs.has_sh }}
+      has_go:   ${{ steps.detect.outputs.has_go }}
+      has_tf:   ${{ steps.detect.outputs.has_tf }}
+      has_helm: ${{ steps.detect.outputs.has_helm }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          has_md=false
+          if git ls-files '*.md' | grep -q .; then has_md=true; fi
+          echo "has_md=$has_md" >> "$GITHUB_OUTPUT"
+
+          has_sh=false
+          if git ls-files '*.sh' | grep -q .; then has_sh=true; fi
+          echo "has_sh=$has_sh" >> "$GITHUB_OUTPUT"
+
+          has_go=false
+          if git ls-files '*.go' | grep -q .; then has_go=true; fi
+          echo "has_go=$has_go" >> "$GITHUB_OUTPUT"
+
+          has_tf=false
+          if git ls-files '*.tf' | grep -q .; then has_tf=true; fi
+          echo "has_tf=$has_tf" >> "$GITHUB_OUTPUT"
+
+          has_helm=false
+          if git ls-files | grep -E '(^|/)Chart\.yaml$' -q; then has_helm=true; fi
+          echo "has_helm=$has_helm" >> "$GITHUB_OUTPUT"
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: raven-actions/actionlint@v2
+
+  markdownlint:
+    name: markdownlint
+    needs: detect
+    if: ${{ needs.detect.outputs.has_md == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            **/*.md
+
+  shellcheck:
+    name: shellcheck
+    needs: detect
+    if: ${{ needs.detect.outputs.has_sh == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+      # ubuntu-latest には入ってることもありますが、確実にするため明示インストール
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git ls-files '*.sh')"
+          if [ -z "$files" ]; then
+            echo "no shell scripts"
+            exit 0
+          fi
+          shellcheck -x $files
+
+  go-test:
+    name: go test/vet
+    needs: detect
+    if: ${{ needs.detect.outputs.has_go == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # go.mod が無いリポで .go だけあるケースは稀だけど、一応ガード
+      - id: gomod
+        shell: bash
+        run: |
+          if [ -f go.mod ]; then
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-go@v5
+        if: ${{ steps.gomod.outputs.has == 'true' }}
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: go test ./...
+        if: ${{ steps.gomod.outputs.has == 'true' }}
+        run: go test ./...
+
+      - name: go vet ./...
+        if: ${{ steps.gomod.outputs.has == 'true' }}
+        run: go vet ./...
+
+      - name: Skip (no go.mod)
+        if: ${{ steps.gomod.outputs.has != 'true' }}
+        run: echo "skip .go files exist but go.mod not found"
+
+  helm:
+    name: helm lint/template + kubeconform
+    needs: detect
+    if: ${{ needs.detect.outputs.has_helm == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t chart_files < <(git ls-files | grep -E '(^|/)Chart\.yaml$' || true)
+          if [ "${#chart_files[@]}" -eq 0 ]; then
+            echo "no Chart.yaml"
+            exit 0
+          fi
+
+          chart_dirs="$(printf '%s\n' "${chart_files[@]}" | xargs -n1 dirname | sort -u)"
+          echo "$chart_dirs" | while read -r d; do
+            [ -z "$d" ] && continue
+            echo "helm lint $d"
+            helm lint "$d"
+          done
+
+      - name: Helm template + kubeconform (strict)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t chart_files < <(git ls-files | grep -E '(^|/)Chart\.yaml$' || true)
+          if [ "${#chart_files[@]}" -eq 0 ]; then
+            echo "no Chart.yaml"
+            exit 0
+          fi
+
+          chart_dirs="$(printf '%s\n' "${chart_files[@]}" | xargs -n1 dirname | sort -u)"
+          echo "$chart_dirs" | while read -r d; do
+            [ -z "$d" ] && continue
+            echo "helm template $d"
+            helm template finpay "$d" > rendered.yaml
+
+            # NOTE: ここは pin したいなら kubeconform のタグを固定してください（例: vX.Y.Z）
+            docker run --rm -i ghcr.io/yannh/kubeconform:latest \
+              -summary -strict -ignore-missing-schemas < rendered.yaml
+          done
+
+  terraform:
+    name: terraform fmt/validate
+    needs: detect
+    if: ${{ needs.detect.outputs.has_tf == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.6"
+
+      - name: terraform fmt (recursive)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d terraform ]; then
+            terraform fmt -check -recursive terraform
+          else
+            terraform fmt -check -recursive .
+          fi
+
+      - name: terraform validate (backend=false)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # “代表ルート”を1つだけvalidateする簡易版（必要なら後でroot分割に対応）
+          if [ -d terraform ]; then
+            terraform -chdir=terraform init -backend=false
+            terraform -chdir=terraform validate
+          else
+            terraform init -backend=false
+            terraform validate
+          fi

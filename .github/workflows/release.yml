@@ -1,0 +1,30 @@
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.1.0)"
+        required: true
+      title:
+        description: "Release title (optional)"
+        required: false
+      body:
+        description: "Release notes (optional)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.title || inputs.tag }}
+          body: ${{ inputs.body || '' }}
+
