@@ -38,12 +38,13 @@ Dockerfile.cross
 # ----------------------------------------
 # Helm / Kubernetes
 # ----------------------------------------
-*.tgz
-charts/
-tmpcharts/
-Chart.lock
-# kubeconfig は通常グローバル .gitignore で管理
-# ~/.kube/config
+**/charts/**/charts/
+**/charts/**/charts/*.tgz
+**/charts/**/Chart.lock
+
+# Rendered manifests / local artifacts
+rendered/
+*.rendered.yaml
 
 # ----------------------------------------
 # IDE / Editor
