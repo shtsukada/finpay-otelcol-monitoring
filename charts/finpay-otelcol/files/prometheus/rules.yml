@@ -1,0 +1,38 @@
+groups:
+  - name: otelcol-loss
+    rules:
+      - record: otelcol:accepted_spans:rate1m
+        expr: rate(otelcol_receiver_accepted_spans[1m])
+      - record: otelcol:sent_spans:rate1m
+        expr: rate(otelcol_exporter_sent_spans[1m])
+      - record: otelcol:loss_spans:rate1m
+        expr: otelcol:accepted_spans:rate1m - otelcol:sent_spans:rate1m
+      - record: otelcol:loss_ratio
+        expr: 100 * otelcol:loss_spans:rate1m / clamp_min(otelcol:accepted_spans:rate1m, 1)
+
+      - alert: OtelcolLossRatioHigh
+        expr: otelcol:loss_ratio > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OTelcol loss ratio high"
+          description: "loss_ratio={{ $value }}%"
+
+      - alert: OtelcolLossRatioCritical
+        expr: otelcol:loss_ratio > 20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OTelcol loss ratio critical"
+          description: "loss_ratio={{ $value }}%"
+
+      - alert: OtelcolLossSpansCritical
+        expr: otelcol:loss_spans:rate1m > 200
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OTelcol loss spans critical"
+          description: "loss_spans/s={{ $value }}"
