@@ -1,0 +1,137 @@
+global:
+  environment: dev
+  imagePullPolicy: IfNotPresent
+
+finpayApi:
+  enabled: false
+  image:
+    repository: ghcr.io/shtsukada/finpay-api
+    tag: v0.1.0
+  service:
+    port: 8080
+  metrics:
+    enabled: true
+    port: 2112
+    path: /metrics
+  redis:
+    addr: redis:6379
+  db:
+    dsn: file:/var/lib/finpay/finpay.db
+  idempotency:
+    lockTTL: 15s
+    cacheTTL: 10m
+  nonce:
+    ttl: 10m
+  auth:
+    timestampSkew: 300s
+    keysFileMountPath: /etc/finpay/client_public_keys.json
+  otel:
+    serviceName: finpay-api
+    otlpEndpoint: otelcol-gateway:4317
+
+finpayClient:
+  enabled: false
+  image:
+    repository: ghcr.io/shtsukada/finpay-client
+    tag: v0.1.0
+  target: finpay-api:8080
+  duration: 5m
+  concurrency: 20
+  retryStorm: true
+  clientId: client-a
+  keyId: k1
+  privateKeySecret:
+    name: finpay-client-privatekey
+    key: private.pem
+  otel:
+    serviceName: finpay-client
+    otlpEndpoint: otelcol-gateway:4317
+
+redis:
+  enabled: false
+  image:
+    repository: redis
+    tag: "7.4.1"
+  service:
+    port: 6379
+  persistence:
+    enabled: false
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+otelcol:
+  enabled: true
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.116.0"
+  mode: normal
+  service:
+    otlpGrpcPort: 4317
+    otlpHttpPort: 4318
+    metricsPort: 8888
+    healthPort: 13133
+  exporters:
+    tempo:
+      endpoint: tempo:4317
+  break:
+    tailSamplingPercentage: 0.5
+    decisionWait: 1s
+    numTraces: 500
+    expectedNewTracesPerSec: 20000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+tempo:
+  enabled: true
+  image:
+    repository: grafana/tempo
+    tag: "2.6.1"
+  service:
+    otlpGrpcPort: 4317
+    otlpHttpPort: 4318
+    httpPort: 3200
+  persistence:
+    enabled: false
+
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: "v2.55.1"
+  service:
+    port: 9090
+  scrapeInterval: 10s
+  evaluationInterval: 10s
+  retention: 24h
+  alerts:
+    enabled: true
+    job: otelcol-gateway
+    for: 5m
+    lossRatioWarning: 5
+    lossRatioCritical: 20
+    lossSpansCritical: 200
+
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: "11.1.5"
+  service:
+    port: 3000
+  adminUser: admin
+  adminPassword: admin
+  dashboards:
+    enabled: true
+    folder: Finpay
+    collectorHealth:
+      uid: collector-health
+  datasources:
+    prometheus:
+      uid: prometheus
+    tempo:
+      uid: tempo
