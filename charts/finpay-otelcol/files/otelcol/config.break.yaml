@@ -1,0 +1,30 @@
+receivers:
+  otlp:
+    protocols:
+      grpc: {}
+      http: {}
+processors:
+  tail_sampling:
+    decision_wait: ${DECISION_WAIT:1s}
+    num_traces: ${NUM_TRACES:500}
+    expected_new_traces_per_sec: ${EXPECTED_NEW_TRACES_PER_SEC:20000}
+    policies:
+      - name: sample-low
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: ${TAIL_SAMPLING_PERCENTAGE:0.5}
+  batch: {}
+exporters:
+  otlp/tempo:
+    endpoint: ${TEMPO_ENDPOINT}
+    tls:
+      insecure: true
+service:
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [tail_sampling, batch]
+      exporters: [otlp/tempo]
