@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otelcol-config
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+data:
+  config.yaml: |-
+{{- if eq .Values.otelcol.mode "break" }}
+{{ .Files.Get "files/otelcol/config.break.yaml" | nindent 4 }}
+{{- else }}
+{{ .Files.Get "files/otelcol/config.normal.yaml" | nindent 4 }}
+{{- end }}
