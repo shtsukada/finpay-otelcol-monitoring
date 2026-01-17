@@ -12,3 +12,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/part-of: finpay
 app.kubernetes.io/managed-by: Helm
 {{- end -}}
+
+{{/*
+Return sha256 checksum of otelcol ConfigMap manifest.
+Changing config files or values will change this and trigger a rollout.
+*/}}
+{{- define "finpay.otelcolConfigChecksum" -}}
+{{- include (print $.Template.BasePath "/otelcol.configmap.yaml") . | sha256sum -}}
+{{- end -}}

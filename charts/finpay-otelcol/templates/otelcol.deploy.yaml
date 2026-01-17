@@ -11,6 +11,8 @@ spec:
       app: otelcol-gateway
   template:
     metadata:
+      annotations:
+        checksum/otelcol-config: {{ include "finpay.otelcolConfigChecksum" . }}
       labels:
         app: otelcol-gateway
         {{- include "finpay.labels" . | nindent 8 }}
