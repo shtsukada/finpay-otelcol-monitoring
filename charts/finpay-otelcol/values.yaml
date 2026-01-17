@@ -65,7 +65,7 @@ redis:
 otelcol:
   enabled: true
   image:
-    repository: otel/opentelemetry-collector-contrib
+    repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
     tag: "0.116.0"
   mode: normal
   service:
