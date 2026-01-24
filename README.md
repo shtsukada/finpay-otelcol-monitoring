@@ -1,7 +1,7 @@
 # finpay-otelcol-monitoring
 
 `finpay-otelcol` ポートフォリオの監視スタック（MVP）。
-OpenTelemetry Collector を中心に、**break（意図的劣化）→ Alert検知 → normal復旧** を再現できる Helm umbrella chart を提供します。
+OpenTelemetry Collector を中心に、**break（意図的劣化）→ Alert検知 → normal復旧** を再現できる Helm umbrella chartを提供します
 
 ## What’s inside (MVP)
 

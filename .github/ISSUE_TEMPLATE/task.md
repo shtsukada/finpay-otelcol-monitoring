@@ -10,9 +10,11 @@ assignees: []
 <!-- 何を達成するか（1-2行） -->
 
 ## Scope
-- 
-- 
+
+-
+-
 
 ## Acceptance criteria
-- [ ] 
+
+- [ ]
 Labels: `` , ``
