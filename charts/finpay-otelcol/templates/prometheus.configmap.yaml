@@ -18,7 +18,7 @@ data:
       - job_name: {{ .Values.prometheus.alerts.job | quote }}
         static_configs:
           - targets:
-              - finpay-otelcol-otelcol-gateway:8889
+              - otelcol-gateway:8888
 
 {{- if .Values.finpayApi.enabled }}
   - job_name: finpay-api
