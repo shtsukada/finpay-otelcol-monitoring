@@ -15,15 +15,21 @@ data:
       - /etc/prometheus/rules.yml
 
     scrape_configs:
-      - job_name: otelcol-gateway
+      - job_name: {{ .Values.prometheus.alerts.job | quote }}
         static_configs:
-          - targets: ["otelcol-gateway:8888"]
-      - job_name: finpay-api
-        static_configs:
-          - targets: ["finpay-api:2112"]
+          - targets:
+              - finpay-otelcol-otelcol-gateway:8889
+
+{{- if .Values.finpayApi.enabled }}
+  - job_name: finpay-api
+    static_configs:
+      - targets:
+          - finpay-api:2112
+{{- end }}
+
 {{- if .Values.prometheus.extraScrapeConfigs }}
 {{- if ne (.Values.prometheus.extraScrapeConfigs | trim) "" }}
-{{ .Values.prometheus.extraScrapeConfigs | nindent 4 }}
+{{ .Values.prometheus.extraScrapeConfigs | nindent 6 }}
 {{- end }}
 {{- end }}
 
