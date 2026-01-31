@@ -20,3 +20,11 @@ Changing config files or values will change this and trigger a rollout.
 {{- define "finpay.otelcolConfigChecksum" -}}
 {{- include (print $.Template.BasePath "/otelcol.configmap.yaml") . | sha256sum -}}
 {{- end -}}
+
+{{/*
+Return sha256 checksum of tempo ConfigMap manifest.
+Changing config files or values will change this and trigger a rollout.
+*/}}
+{{- define "finpay.tempoConfigChecksum" -}}
+{{- include (print $.Template.BasePath "/tempo.configmap.yaml") . | sha256sum -}}
+{{- end -}}

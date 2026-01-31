@@ -1,0 +1,58 @@
+{{- if .Values.tempo.enabled }}
+{{- if .Values.tempo.persistence }}
+{{- fail "MVPでは tempo.persistence=false(emptyDir)固定。今後の対応予定" }}
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      annotations:
+        checksum/tempo-config: {{ include "finpay.tempoConfigChecksum" . }}
+      labels:
+        app: tempo
+        {{- include "finpay.labels" . | nindent 8 }}
+    spec:
+      # emptyDirを/var/tempoにマウントするため、権限事故防止としてfsGroupを合わせる
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+
+      containers:
+        - name: tempo
+          image: "{{ .Values.tempo.image.repository }}:{{ .Values.tempo.image.tag }}"
+          imagePullPolicy: {{ .Values.tempo.image.pullPolicy }}
+          args:
+            - "-config.file=/conf/tempo.yaml"
+          ports:
+            - name: http
+              containerPort: {{ .Values.tempo.service.port }}
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+              readOnly: true
+            - name: storage
+              mountPath: /var/tempo
+
+      volumes:
+        - name: config
+          configMap:
+            name: tempo-config
+        - name: storage
+          emptyDir: {}
+{{- end }}

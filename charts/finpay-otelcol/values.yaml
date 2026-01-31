@@ -87,16 +87,16 @@ otelcol:
       memory: 256Mi
 
 tempo:
-  enabled: true
+  enabled: false
   image:
     repository: grafana/tempo
-    tag: "2.6.1"
+    tag: "2.9.0"
+    pullPolicy: IfNotPresent
   service:
     otlpGrpcPort: 4317
     otlpHttpPort: 4318
     httpPort: 3200
-  persistence:
-    enabled: false
+  persistence: false
 
 prometheus:
   enabled: true
