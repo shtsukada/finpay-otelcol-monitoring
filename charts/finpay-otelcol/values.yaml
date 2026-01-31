@@ -87,7 +87,7 @@ otelcol:
       memory: 256Mi
 
 tempo:
-  enabled: true
+  enabled: false
   image:
     repository: grafana/tempo
     tag: "2.9.0"
