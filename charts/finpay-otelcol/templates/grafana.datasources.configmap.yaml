@@ -1,0 +1,26 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: {{ .Values.grafana.datasources.prometheus.name | quote }}
+        type: prometheus
+        access: proxy
+        url: {{ .Values.grafana.datasources.prometheus.url | quote }}
+        isDefault: {{ .Values.grafana.datasources.prometheus.isDefault | default true }}
+        editable: false
+
+      - name: {{ .Values.grafana.datasources.tempo.name | quote }}
+        type: tempo
+        access: proxy
+        url: {{ .Values.grafana.datasources.tempo.url | quote }}
+        editable: false
+        jsonData:
+          httpMethod: GET
+{{- end }}

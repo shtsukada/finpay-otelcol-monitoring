@@ -1,0 +1,16 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: grafana
+  ports:
+    - name: http
+      port: {{ .Values.grafana.service.port }}
+      targetPort: 3000
+{{- end }}

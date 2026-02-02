@@ -121,6 +121,7 @@ grafana:
   image:
     repository: grafana/grafana
     tag: "11.1.5"
+    pullPolicy: IfNotPresent
   service:
     port: 3000
   adminUser: admin
@@ -132,6 +133,11 @@ grafana:
       uid: collector-health
   datasources:
     prometheus:
-      uid: prometheus
+      name: Prometheus
+      url: http://prometheus:9090
+      isDefault: true
     tempo:
-      uid: tempo
+      name: Tempo
+      url: http://tempo:3200
+
+  resources: {}
