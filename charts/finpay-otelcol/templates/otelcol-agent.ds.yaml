@@ -1,0 +1,51 @@
+{{- if .Values.otelcolAgent.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otelcol-agent
+  labels:
+    app: otelcol-agent
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: otelcol-agent
+  template:
+    metadata:
+      annotations:
+        checksum/otelcol-agent-config: {{ include "finpay.otelcolAgentConfigChecksum" . }}
+      labels:
+        app: otelcol-agent
+        {{- include "finpay.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.otelcolAgent.serviceAccount.name }}
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: otelcol
+          image: "{{ .Values.otelcol.image.repository }}:{{ .Values.otelcol.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          args: ["--config=/etc/otelcol/config.yaml"]
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:
+              cpu: {{ .Values.otelcolAgent.resources.requests.cpu | quote }}
+              memory: {{ .Values.otelcolAgent.resources.requests.memory | quote }}
+          volumeMounts:
+            - name: otelcol-agent-config
+              mountPath: /etc/otelcol
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+      volumes:
+        - name: otelcol-agent-config
+          configMap:
+            name: otelcol-agent-config
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+{{- end }}

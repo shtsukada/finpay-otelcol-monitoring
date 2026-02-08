@@ -1,0 +1,44 @@
+receivers:
+  filelog:
+    include:
+      # /var/log/pods/<namespace>_<podname>_<uid>/<container>/*.log
+      - /var/log/pods/*_otelcol-gateway_*/*/*.log
+    start_at: end
+    include_file_path: true
+    operators:
+      - type: container
+        id: container-parser
+
+processors:
+  k8sattributes:
+    auth_type: serviceAccount
+    passthrough: false
+    filter:
+      node_from_env_var: K8S_NODE_NAME
+    pod_association:
+      - sources:
+          - from: resource_attribute
+            name: k8s.pod.uid
+    extract:
+      labels:
+        - key: app
+          tag_name: app
+
+  resource/loki-label-hint:
+    attributes:
+      - action: insert
+        key: loki.resource.labels
+        value: app
+
+  batch: {}
+
+exporters:
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog]
+      processors: [k8sattributes, resource/loki-label-hint, batch]
+      exporters: [loki]

@@ -23,4 +23,10 @@ data:
         editable: false
         jsonData:
           httpMethod: GET
+
+      - name: {{ .Values.grafana.datasources.loki.name | quote }}
+        type: loki
+        access: proxy
+        url: {{ .Values.grafana.datasources.loki.url | quote }}
+        editable: false
 {{- end }}
