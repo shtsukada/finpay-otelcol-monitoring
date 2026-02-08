@@ -86,6 +86,22 @@ otelcol:
       cpu: 100m
       memory: 256Mi
 
+otelcolAgent:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: otelcol-agent
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+
+loki:
+  enabled: true
+  image:
+    repository: grafana/loki
+    tag: "2.9.0"
+
 tempo:
   enabled: false
   image:
@@ -139,5 +155,8 @@ grafana:
     tempo:
       name: Tempo
       url: http://tempo:3200
+    loki:
+      name: "Loki"
+      url: "http://loki:3100"
 
   resources: {}

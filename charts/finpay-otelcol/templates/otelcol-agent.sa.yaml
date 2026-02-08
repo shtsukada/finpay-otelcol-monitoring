@@ -1,0 +1,8 @@
+{{- if and .Values.otelcolAgent.enabled .Values.otelcolAgent.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.otelcolAgent.serviceAccount.name }}
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+{{- end }}

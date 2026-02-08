@@ -1,0 +1,11 @@
+{{- if .Values.otelcolAgent.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otelcol-agent-config
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+data:
+  config.yaml: |-
+{{ .Files.Get "files/otelcol-agent/config.yaml" | nindent 4 }}
+{{- end }}

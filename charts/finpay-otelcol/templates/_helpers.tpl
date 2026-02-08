@@ -28,3 +28,17 @@ Changing config files or values will change this and trigger a rollout.
 {{- define "finpay.tempoConfigChecksum" -}}
 {{- include (print $.Template.BasePath "/tempo.configmap.yaml") . | sha256sum -}}
 {{- end -}}
+
+{{/*
+Return sha256 checksum of loki ConfigMap manifest.
+*/}}
+{{- define "finpay.lokiConfigChecksum" -}}
+{{- include (print $.Template.BasePath "/loki.configmap.yaml") . | sha256sum -}}
+{{- end -}}
+
+{{/*
+Return sha256 checksum of otelcol-agent ConfigMap manifest.
+*/}}
+{{- define "finpay.otelcolAgentConfigChecksum" -}}
+{{- include (print $.Template.BasePath "/otelcol-agent.configmap.yaml") . | sha256sum -}}
+{{- end -}}
