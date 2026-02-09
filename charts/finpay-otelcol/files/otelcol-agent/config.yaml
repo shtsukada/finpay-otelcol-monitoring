@@ -24,21 +24,17 @@ processors:
         - key: app
           tag_name: app
 
-  resource/loki-label-hint:
-    attributes:
-      - action: insert
-        key: loki.resource.labels
-        value: app
-
   batch: {}
 
 exporters:
   loki:
-    endpoint: http://loki:3100/loki/api/v1/push
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
 
 service:
   pipelines:
     logs:
       receivers: [filelog]
-      processors: [k8sattributes, resource/loki-label-hint, batch]
-      exporters: [loki]
+      processors: [k8sattributes, batch]
+      exporters: [otlphttp/loki]
