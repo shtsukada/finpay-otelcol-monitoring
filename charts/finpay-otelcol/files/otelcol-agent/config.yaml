@@ -27,7 +27,7 @@ processors:
   batch: {}
 
 exporters:
-  loki:
+  otlphttp/loki:
     endpoint: http://loki:3100/otlp
     tls:
       insecure: true
