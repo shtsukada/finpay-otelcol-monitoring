@@ -100,7 +100,7 @@ loki:
   enabled: true
   image:
     repository: grafana/loki
-    tag: "2.9.0"
+    tag: "3.6.4"
 
 tempo:
   enabled: false
