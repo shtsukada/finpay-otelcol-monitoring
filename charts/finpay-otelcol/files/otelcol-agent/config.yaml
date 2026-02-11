@@ -2,7 +2,7 @@ receivers:
   filelog:
     include:
       # /var/log/pods/<namespace>_<podname>_<uid>/<container>/*.log
-      - /var/log/pods/*_otelcol-gateway_*/*/*.log
+      - /var/log/pods/monitoring_otelcol-gateway-*_*/*/*.log
     start_at: end
     include_file_path: true
     operators:
