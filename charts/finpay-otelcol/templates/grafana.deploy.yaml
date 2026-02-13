@@ -15,6 +15,12 @@ spec:
       labels:
         app: grafana
         {{- include "finpay.labels" . | nindent 8 }}
+      annotations:
+        checksum/grafana-datasources: {{ include (print $.Template.BasePath "/grafana.datasource.configmap.yaml") . | sha256sum }}
+        {{- if .Values.grafana.dashboards.enabled }}
+        checksum/grafana-dashboards-provisioning: {{ include (print $.Template.BasePath "/grafana.dashboards-provisioning.configmap.yaml") . | sha256sum }}
+        checksum/grafana-dashboards: {{ include (print $.Template.BasePath "/grafana.dashboards.configmap.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       containers:
         - name: grafana
@@ -36,6 +42,14 @@ spec:
             - name: grafana-datasources
               mountPath: /etc/grafana/provisioning/datasources
               readOnly: true
+            {{- if .Values.grafana.dashboards.enabled }}
+            - name: grafana-dashboards-provisioning
+              mountPath: /etc/grafana/provisioning/dashboards
+              readOnly: true
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards
+              readOnly: true
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /api/health
@@ -55,5 +69,13 @@ spec:
           emptyDir: {}
         - name: grafana-datasources
           configMap:
-            name: grafana-datasources
+            name: {{ include "finpay.fullname" . }}-grafana-datasources
+        {{- if .Values.grafana.dashboards.enabled }}
+        - name: grafana-dashboards-provisioning
+          configMap:
+            name: {{ include "finpay.fullname" . }}-grafana-dashboards-provisioning
+        - name: grafana-dashboards
+          configMap:
+            name: {{ include "finpay.fullname" . }}-grafana-dashboards
+        {{- end }}
 {{- end }}

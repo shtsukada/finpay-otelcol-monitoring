@@ -1,0 +1,116 @@
+{
+  "uid": "{{ .Values.grafana.dashboards.collectorHealth.uid }}",
+  "title": "Collector Health",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "tags": ["finpay", "otelcol"],
+  "time": { "from": "now-30m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "type": "query",
+        "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+        "query": "label_values(up, job)",
+        "refresh": 1,
+        "hide": 0
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+        "query": "label_values(up{job=~\"$job\"}, instance)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Targets UP",
+      "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "refId": "A", "expr": "up{job=~\"$job\", instance=~\"$instance\"}", "legendFormat": "{{instance}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Receiver accepted (spans/s)",
+      "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(otelcol_receiver_accepted_spans{job=~\"$job\", instance=~\"$instance\"}[5m])) by (receiver)",
+          "legendFormat": "{{receiver}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Exporter sent (spans/s)",
+      "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(otelcol_exporter_sent_spans{job=~\"$job\", instance=~\"$instance\"}[5m])) by (exporter)",
+          "legendFormat": "{{exporter}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Loss (accepted - sent) (spans/s)",
+      "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(otelcol_receiver_accepted_spans{job=~\"$job\", instance=~\"$instance\"}[5m])) - sum(rate(otelcol_exporter_sent_spans{job=~\"$job\", instance=~\"$instance\"}[5m]))",
+          "legendFormat": "loss"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Send failures (spans/s)",
+      "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(otelcol_exporter_send_failed_spans{job=~\"$job\", instance=~\"$instance\"}[5m])) by (exporter)",
+          "legendFormat": "{{exporter}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Exporter queue size",
+      "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(otelcol_exporter_queue_size{job=~\"$job\", instance=~\"$instance\"}) by (exporter)",
+          "legendFormat": "{{exporter}}"
+        }
+      ]
+    }
+  ],
+  "annotations": { "list": [] },
+  "links": []
+}
