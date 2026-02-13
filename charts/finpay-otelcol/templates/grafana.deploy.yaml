@@ -16,7 +16,7 @@ spec:
         app: grafana
         {{- include "finpay.labels" . | nindent 8 }}
       annotations:
-        checksum/grafana-datasources: {{ include (print $.Template.BasePath "/grafana.datasource.configmap.yaml") . | sha256sum }}
+        checksum/grafana-datasources: {{ include (print $.Template.BasePath "/grafana.datasources.configmap.yaml") . | sha256sum }}
         {{- if .Values.grafana.dashboards.enabled }}
         checksum/grafana-dashboards-provisioning: {{ include (print $.Template.BasePath "/grafana.dashboards-provisioning.configmap.yaml") . | sha256sum }}
         checksum/grafana-dashboards: {{ include (print $.Template.BasePath "/grafana.dashboards.configmap.yaml") . | sha256sum }}
