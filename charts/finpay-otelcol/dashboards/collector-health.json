@@ -37,7 +37,7 @@
       "datasource": "{{ .Values.grafana.datasources.prometheus.name }}",
       "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
       "targets": [
-        { "refId": "A", "expr": "up{job=~\"$job\", instance=~\"$instance\"}", "legendFormat": "{{instance}}" }
+        { "refId": "A", "expr": "up{job=~\"$job\", instance=~\"$instance\"}", "legendFormat": "{{`{{instance}}`}}" }
       ]
     },
     {
@@ -50,7 +50,7 @@
         {
           "refId": "A",
           "expr": "sum(rate(otelcol_receiver_accepted_spans{job=~\"$job\", instance=~\"$instance\"}[5m])) by (receiver)",
-          "legendFormat": "{{receiver}}"
+          "legendFormat": "{{`{{receiver}}`}}"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "refId": "A",
           "expr": "sum(rate(otelcol_exporter_sent_spans{job=~\"$job\", instance=~\"$instance\"}[5m])) by (exporter)",
-          "legendFormat": "{{exporter}}"
+          "legendFormat": "{{`{{exporter}}`}}"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "refId": "A",
           "expr": "sum(rate(otelcol_exporter_send_failed_spans{job=~\"$job\", instance=~\"$instance\"}[5m])) by (exporter)",
-          "legendFormat": "{{exporter}}"
+          "legendFormat": "{{`{{exporter}}`}}"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "refId": "A",
           "expr": "max(otelcol_exporter_queue_size{job=~\"$job\", instance=~\"$instance\"}) by (exporter)",
-          "legendFormat": "{{exporter}}"
+          "legendFormat": "{{`{{exporter}}`}}"
         }
       ]
     }
