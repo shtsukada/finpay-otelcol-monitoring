@@ -1,0 +1,21 @@
+{{- if and .Values.grafana.enabled .Values.grafana.dashboards.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "finpay.fullname" . }}-grafana-dashboards-provisioning
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: finpay
+        orgId: 1
+        folder: {{ .Values.grafana.dashboards.folder | quote }}
+        type: file
+        disableDeletion: true
+        editable: false
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false
+{{- end }}

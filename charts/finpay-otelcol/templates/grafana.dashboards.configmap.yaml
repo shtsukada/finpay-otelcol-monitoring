@@ -1,0 +1,11 @@
+{{- if and .Values.grafana.enabled .Values.grafana.dashboards.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "finpay.fullname" . }}-grafana-dashboards
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+data:
+  collector-health.json: |
+{{ tpl (.Files.Get "dashboards/collector-health.json") . | nindent 4 }}
+{{- end }}

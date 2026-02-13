@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-datasources
+  name: {{ include "finpay.fullname" . }}-grafana-datasources
   labels:
     {{- include "finpay.labels" . | nindent 4 }}
 data:
@@ -16,6 +16,7 @@ data:
         isDefault: {{ .Values.grafana.datasources.prometheus.isDefault | default true }}
         editable: false
 
+{{- if .Values.tempo.enabled }}
       - name: {{ .Values.grafana.datasources.tempo.name | quote }}
         type: tempo
         access: proxy
@@ -23,10 +24,13 @@ data:
         editable: false
         jsonData:
           httpMethod: GET
+{{- end }}
 
+{{- if .Values.loki.enabled }}
       - name: {{ .Values.grafana.datasources.loki.name | quote }}
         type: loki
         access: proxy
         url: {{ .Values.grafana.datasources.loki.url | quote }}
         editable: false
+{{- end }}
 {{- end }}
