@@ -103,7 +103,7 @@ loki:
     tag: "3.6.4"
 
 tempo:
-  enabled: false
+  enabled: true
   image:
     repository: grafana/tempo
     tag: "2.9.0"
