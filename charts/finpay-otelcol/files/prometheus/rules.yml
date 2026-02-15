@@ -1,3 +1,8 @@
+# Note:
+# This file is kept as a reference only.
+# Prometheus rules are rendered from templates/prometheus.configmap.yaml
+# so thresholds (lossRatioWarning/lossRatioCritical/lossSpansCritical/for) follow values.yaml.
+
 groups:
   - name: otelcol-loss
     rules:

@@ -5,8 +5,15 @@ metadata:
   name: {{ include "finpay.fullname" . }}-prometheus
   labels:
     {{- include "finpay.labels" . | nindent 4 }}
+
+{{- $alertsEnabled := .Values.prometheus.alerts.enabled | default true }}
+{{- $for := .Values.prometheus.alerts.for | default "5m" }}
+{{- $warn := .Values.prometheus.alerts.lossRatioWarning | default 5 }}
+{{- $crit := .Values.prometheus.alerts.lossRatioCritical | default 20 }}
+{{- $spansCrit := .Values.prometheus.alerts.lossSpansCritical | default 200 }}
+
 data:
-  prometheus.yml: |
+  prometheus.yml: |-
     global:
       scrape_interval: {{ .Values.prometheus.scrapeInterval | default "10s" | quote }}
       evaluation_interval: {{ .Values.prometheus.evaluationInterval | default "10s" | quote }}
@@ -21,10 +28,10 @@ data:
               - otelcol-gateway:8888
 
 {{- if .Values.finpayApi.enabled }}
-  - job_name: finpay-api
-    static_configs:
-      - targets:
-          - finpay-api:2112
+      - job_name: "finpay-api"
+        static_configs:
+          - targets:
+              - finpay-api:2112
 {{- end }}
 
 {{- if .Values.prometheus.extraScrapeConfigs }}
@@ -33,6 +40,51 @@ data:
 {{- end }}
 {{- end }}
 
-  rules.yml: |
-{{- (.Files.Get "files/prometheus/rules.yml") | nindent 4 }}
+  rules.yml: |-
+    groups:
+      - name: otelcol-loss
+        rules:
+          - record: otelcol:accepted_spans:rate1m
+            expr: rate(otelcol_receiver_accepted_spans[1m])
+
+          - record: otelcol:sent_spans:rate1m
+            expr: rate(otelcol_exporter_sent_spans[1m])
+
+          - record: otelcol:loss_spans:rate1m
+            expr: otelcol:accepted_spans:rate1m - otelcol:sent_spans:rate1m
+
+          - record: otelcol:loss_ratio
+            expr: 100 * otelcol:loss_spans:rate1m / clamp_min(otelcol:accepted_spans:rate1m, 1)
+
+{{- if $alertsEnabled }}
+          - alert: OtelcolLossRatioHigh
+            expr: otelcol:loss_ratio > {{ $warn }}
+            for: {{ $for }}
+            labels:
+              severity: warning
+              component: otelcol
+            annotations:
+              summary: "OTelcol loss ratio high"
+              description: 'loss_ratio={{ "{{ $value }}" }}% (threshold={{ $warn }}%)'
+
+          - alert: OtelcolLossRatioCritical
+            expr: otelcol:loss_ratio > {{ $crit }}
+            for: {{ $for }}
+            labels:
+              severity: critical
+              component: otelcol
+            annotations:
+              summary: "OTelcol loss ratio critical"
+              description: 'loss_ratio={{ "{{ $value }}" }}% (threshold={{ $crit }}%)'
+
+          - alert: OtelcolLossSpansCritical
+            expr: otelcol:loss_spans:rate1m > {{ $spansCrit }}
+            for: {{ $for }}
+            labels:
+              severity: critical
+              component: otelcol
+            annotations:
+              summary: "OTelcol loss spans critical"
+              description: 'loss_spans/s={{ "{{ $value }}" }} (threshold={{ $spansCrit }})'
+{{- end }}
 {{- end }}
