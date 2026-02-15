@@ -67,7 +67,7 @@ otelcol:
   image:
     repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
     tag: "0.122.0"
-  mode: normal
+  mode: break
   service:
     otlpGrpcPort: 4317
     otlpHttpPort: 4318
