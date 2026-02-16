@@ -29,9 +29,17 @@ spec:
             - { name: health, containerPort: 13133 }
           env:
             - name: TEMPO_ENDPOINT
-              value: "{{ .Values.otelcol.exporters.tempo.endpoint }}"
+              value: {{ .Values.otelcol.exporters.tempo.endpoint }}
             - name: OTELCOL_MODE
-              value: "{{ .Values.otelcol.mode }}"
+              value: {{ .Values.otelcol.mode }}
+            - name: DECISION_WAIT
+              value: {{ .Values.otelcol.break.decisionWait | quote }}
+            - name: NUM_TRACES
+              value: {{ .Values.otelcol.break.numTraces | quote }}
+            - name: EXPECTED_NEW_TRACES_PER_SEC
+              value: {{ .Values.otelcol.break.expectedNewTracesPerSec | quote }}
+            - name: TAIL_SAMPLING_PERCENTAGE
+              value: {{ .Values.otelcol.break.tailSamplingPercentage | quote }}
           resources:
             requests:
               cpu: {{ .Values.otelcol.resources.requests.cpu | quote }}

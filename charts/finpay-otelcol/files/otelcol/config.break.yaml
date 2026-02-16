@@ -5,14 +5,14 @@ receivers:
       http: {}
 processors:
   tail_sampling:
-    decision_wait: ${DECISION_WAIT:1s}
-    num_traces: ${NUM_TRACES:500}
-    expected_new_traces_per_sec: ${EXPECTED_NEW_TRACES_PER_SEC:20000}
+    decision_wait: ${env:DECISION_WAIT:-1s}
+    num_traces: ${env:NUM_TRACES:-500}
+    expected_new_traces_per_sec: ${env:EXPECTED_NEW_TRACES_PER_SEC:-20000}
     policies:
       - name: sample-low
         type: probabilistic
         probabilistic:
-          sampling_percentage: ${TAIL_SAMPLING_PERCENTAGE:0.5}
+          sampling_percentage: ${env:TAIL_SAMPLING_PERCENTAGE:-0.5}
   batch: {}
 exporters:
   otlp/tempo:
