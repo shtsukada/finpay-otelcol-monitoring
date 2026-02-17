@@ -7,9 +7,9 @@ groups:
   - name: otelcol-loss
     rules:
       - record: otelcol:accepted_spans:rate1m
-        expr: rate(otelcol_receiver_accepted_spans[1m])
+        expr: sum by (job, instance) (rate(otelcol_receiver_accepted_spans[1m]))
       - record: otelcol:sent_spans:rate1m
-        expr: rate(otelcol_exporter_sent_spans[1m])
+        expr: sum by (job, instance) (rate(otelcol_exporter_sent_spans[1m]))
       - record: otelcol:loss_spans:rate1m
         expr: otelcol:accepted_spans:rate1m - otelcol:sent_spans:rate1m
       - record: otelcol:loss_ratio
