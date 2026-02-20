@@ -67,7 +67,7 @@ otelcol:
   image:
     repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
     tag: "0.122.0"
-  mode: break
+  mode: normal
   service:
     otlpGrpcPort: 4317
     otlpHttpPort: 4318
@@ -127,10 +127,10 @@ prometheus:
   alerts:
     enabled: true
     job: otelcol-gateway
-    for: 30s
+    for: 60s
     lossRatioWarning: 5
     lossRatioCritical: 20
-    lossSpansCritical: 10
+    lossSpansCritical: 200
 
 grafana:
   enabled: true
