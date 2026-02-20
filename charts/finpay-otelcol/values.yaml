@@ -130,7 +130,7 @@ prometheus:
     for: 5m
     lossRatioWarning: 5
     lossRatioCritical: 20
-    lossSpansCritical: 200
+    lossSpansCritical: 10
 
 grafana:
   enabled: true
