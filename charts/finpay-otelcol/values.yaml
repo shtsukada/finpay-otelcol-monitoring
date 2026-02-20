@@ -127,7 +127,7 @@ prometheus:
   alerts:
     enabled: true
     job: otelcol-gateway
-    for: 5m
+    for: 30s
     lossRatioWarning: 5
     lossRatioCritical: 20
     lossSpansCritical: 10
