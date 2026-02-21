@@ -65,6 +65,8 @@ kubectl -n monitoring port-forward svc/tempo 3200:3200
    * `OtelcolLossRatioCritical` / `OtelcolLossSpansCritical`（条件により）
 5. `otelcol.mode=normal` に戻し、alert が Inactive 方向へ戻ることを確認
 
+詳細手順は [docs/runbooks/loss-alerts.md](docs/runbooks/loss-alerts.md) を参照してください。
+
 ### Switch by Helm
 
 ```bash
