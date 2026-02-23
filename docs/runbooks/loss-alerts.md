@@ -50,7 +50,7 @@ commit →merge →Argo CD sync
 期待結果
 * otelcol-gatewayがrolloutし、再びRunning 1/1で安定する
 
-## 3.トレースを刑ぞ置く送信してPending→Firingを作る
+## 3.トレースを継続送信してPending→Firingを作る
 3-1)telemetrygenで60秒以上トレース送信(for:60sを満たすため)
 telemetrygen traces \
   --otlp-endpoint localhost:4317 \
@@ -59,7 +59,7 @@ telemetrygen traces \
   --duration 180s
 
 期待結果
-* Prometheus Graphで以下が値を返す(Result seeies >= 1)
+* Prometheus Graphで以下が値を返す(Result series >= 1)
   * otelcol:accepted_spans:rate1m
   * otelcol:sent_spans:rate1m
   * otelcol:loss_spans:rate1m
