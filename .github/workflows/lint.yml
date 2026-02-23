@@ -43,6 +43,15 @@ jobs:
           if git ls-files | grep -E '(^|/)Chart\.yaml$' -q; then has_helm=true; fi
           echo "has_helm=$has_helm" >> "$GITHUB_OUTPUT"
 
+          if grep -RInE '(:latest\b|tag:[[:space:]]*latest\b)' . \
+              --exclude-dir=.git \
+              --exclude-dir=docs \
+              --exclude='*.md' \
+              --exclude='CHANGELOG*' ; then
+            echo "::error::Found usage of latest tag. Pin versions."
+            exit 1
+          fi
+
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
@@ -130,12 +139,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
+      - name: Setup Helm (pinned)
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.18.3
 
-      - name: Helm lint
+      - name: Install kubeconform (pinned)
         shell: bash
         run: |
           set -euo pipefail
+          KUBECONFORM_VERSION="v0.6.7"
+          curl -sSL -o /tmp/kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          tar -C /tmp -xzf /tmp/kubeconform.tar.gz kubeconform
+          sudo install -m 0755 /tmp/kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: Install yq (pinned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          YQ_VERSION="v4.50.1"
+          curl -sSL -o /usr/local/bin/yq \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Helm template + kubeconform + promtool check rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROMETHEUS_IMAGE="prom/prometheus:v2.48.1"
+          KUBERNETES_VERSION="1.29.0"
+
           mapfile -t chart_files < <(git ls-files | grep -E '(^|/)Chart\.yaml$' || true)
           if [ "${#chart_files[@]}" -eq 0 ]; then
             echo "no Chart.yaml"
@@ -143,31 +179,49 @@ jobs:
           fi
 
           chart_dirs="$(printf '%s\n' "${chart_files[@]}" | xargs -n1 dirname | sort -u)"
+
           echo "$chart_dirs" | while read -r d; do
             [ -z "$d" ] && continue
-            echo "helm lint $d"
-            helm lint "$d"
-          done
+            slug="$(echo "$d" | tr '/ ' '__')"
+            rendered="rendered-${slug}.yaml"
+            rules_dir="rules_rendered/${slug}"
 
-      - name: Helm template + kubeconform (strict)
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t chart_files < <(git ls-files | grep -E '(^|/)Chart\.yaml$' || true)
-          if [ "${#chart_files[@]}" -eq 0 ]; then
-            echo "no Chart.yaml"
-            exit 0
-          fi
-
-          chart_dirs="$(printf '%s\n' "${chart_files[@]}" | xargs -n1 dirname | sort -u)"
-          echo "$chart_dirs" | while read -r d; do
-            [ -z "$d" ] && continue
             echo "helm template $d"
-            helm template finpay "$d" > rendered.yaml
+            helm template finpay "$d" > "$rendered"
 
-            # NOTE: ここは pin したいなら kubeconform のタグを固定してください（例: vX.Y.Z）
-            docker run --rm -i ghcr.io/yannh/kubeconform:latest \
-              -summary -strict -ignore-missing-schemas < rendered.yaml
+            echo "kubeconform $d"
+            kubeconform \
+              -summary -strict -ignore-missing-schemas \
+              -kubernetes-version "$KUBERNETES_VERSION" \
+              < "$rendered"
+
+            rm -rf "$rules_dir"
+            mkdir -p "$rules_dir"
+
+            mapfile -t cms < <(yq -r 'select(.kind=="ConfigMap" and .data."rules.yml") | .metadata.name' "$rendered")
+            if [ "${#cms[@]}" -gt 0 ]; then
+              for cm in "${cms[@]}"; do
+                yq -r 'select(.kind=="ConfigMap" and .metadata.name == "'"$cm"'") | .data."rules.yml"' \
+                  "$rendered" > "$rules_dir/${cm}.yml"
+              done
+            else
+              # fallback: 参照用 rules.yml があるならそれを検証（暫定でもCIに乗る）
+              if [ -f "$d/files/prometheus/rules.yml" ]; then
+                cp "$d/files/prometheus/rules.yml" "$rules_dir/fallback.yml"
+              elif [ -f "files/prometheus/rules.yml" ]; then
+                cp "files/prometheus/rules.yml" "$rules_dir/fallback.yml"
+              else
+                echo "::error::No rules found for promtool (no rendered ConfigMap.data[\"rules.yml\"] and no files/prometheus/rules.yml)."
+                exit 1
+              fi
+            fi
+
+            echo "promtool check rules $d"
+            docker run --rm \
+              --entrypoint /bin/promtool \
+              -v "${PWD}:/work" -w /work \
+              "${PROMETHEUS_IMAGE}" \
+              check rules "$rules_dir"/*.yml
           done
 
   terraform:
