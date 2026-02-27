@@ -38,6 +38,7 @@ docs/
 ## Prerequisites
 
 必須
+
 * `kubectl`(クラスタ接続済み)
 * `helm`v3
 任意
@@ -45,6 +46,7 @@ docs/
 * `telemetrygen`(finpay-clientがなくてもトレースを流してLossアラートを再現するため)
 
 telemetrygenの例(Collectorバージョンと合わせるのが安全)
+
 ```bash
 go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen@v0.122.0
 ```
@@ -63,7 +65,9 @@ helm upgrade --install finpay-otelcol ./charts/finpay-otelcol \
 kubectl -n monitoring get pods -o wide
 kubectl -n monitoring get svc
 ```
+
 期待結果(成功条件)
+
 * `kubectl get pods`で主要Podが`Running`
 * `kubectl get svc`で`grafana / prometheus / tempo / loki / otelcol-gateway`が見える
 
@@ -84,15 +88,19 @@ kubectl -n monitoring port-forward svc/otelcol-gateway 13133:13133 4317:4317 431
 * otelcol-gateway health: [http://localhost:13133](http://localhost:13133/health)
 
 任意の疎通確認
+
 ```bash
 curl -sf http://localhost:13133/healthz && echo "otelcol-gateway: OK"
 curl -sf http://localhost:3100/ready && echo "loki:OK"
 ```
+
 ## Grafana login(MVP既定)
 
 デモ容易性のためvalues.yamlでハードコードしています(外部公開しない前提)
+
 * user:`admin`
 * password:`admin`
+
 > 将来はSecret化(別Issue)を推奨します。
 
 ## Post-install checks(監視が正常なこと)
@@ -100,17 +108,20 @@ curl -sf http://localhost:3100/ready && echo "loki:OK"
 1) Prometheus Targets
 Prometheus -> Status -> Targets
 期待結果
+
 * `otelcol-gateway`が`UP`
 * endpointが`http://otelcol-gateway:8888/metrics`
 
-2) Rulesがロードされている
+1) Rulesがロードされている
 Prometheus -> Status -> Rules
 期待結果
+
 * group`otelcol-loss`が表示される
 * Errorがない
 
-3) Grafana Datasources / Dashboard
+1) Grafana Datasources / Dashboard
 Grafana
+
 * Data sourcesが`Prometheus / Tempo / Loki`で`OK`
 * DashboardsにCollector Health (UID:collector-health)がある(Folder:`Finpay`)
 
@@ -119,56 +130,70 @@ Grafana
 このデモは、otelcol-gatewayにトレースを流し、意図的にloss(accepted - sent)を発生させてPrometheusのLoss系アラートがPending→Firingになることを確認します。
 
 1) `otelcol.mode=normal`で開始
+
 ```bash
 helm upgrade --install finpay-otelcol ./charts/finpay-otelcol \
   -n monitoring \
   -f ./charts/finpay-otelcol/values.yaml \
   --set otelcol.mode=normal
 ```
+
 期待結果
+
 * `otelcol-gateway`が再デプロイされる場合はrolloutして`Running`に戻る
 
 1) `otelcol.mode=break`に切り替え
+
 ```bash
 helm upgrade --install finpay-otelcol ./charts/finpay-otelcol \
   -n monitoring \
   -f ./charts/finpay-otelcol/values.yaml \
   --set otelcol.mode=break
 ```
+
 期待結果
+
 * `otelcol-gateway`がrolloutしてbreak設定になる
 
-3) トレースを2分以上流す
+1) トレースを2分以上流す
 A. finpay-client
+
 * retry stormを2分以上実行
 
 B. telemetrygen
+
 ```bash
 telemetrygen traces --otlp-endpoint localhost:4317 --otlp-insecure --rate 10 --duration 3m
 ```
+
 * Alertは`for: 60s`→条件が60秒以上継続したら発火
 * さらにrecording ruleが`rata(...[1m])`を使うため、値が揺れたり空になることがあります
 
-4) Alertsを確認(Pending->Firing)
+1) Alertsを確認(Pending->Firing)
 Prometheus->Alerts[http://localhost:9090](http://localhost:9090)
+
 * `OtelcolLossRatioHigh`（warning）
 * `OtelcolLossRatioCritical` (critical)
 * `OtelcolLossSpansCritical` (critical)
 
 期待結果
+
 * 最初は`Pending`
 * 条件成立が継続すると`Firing`
 補足
 * `OtelcolLossSpansCritical`(loss_spans/s > 200)は`--rate 10`だと越えにくいです。確実に見る場合は`--rate`をあげてください(例：`--rate 500`)
 
-5) restore(normalに戻す)→収束確認
+1) restore(normalに戻す)→収束確認
+
 ```bash
 helm upgrade --install finpay-otelcol ./charts/finpay-otelcol \
   -n monitoring \
   -f ./charts/finpay-otelcol/values.yaml \
   --set otelcol.mode=normal
 ```
+
 期待結果
+
 * `otelcol-gateway`が `Running 1/1`
 * `/alerts`が時間経過で `Firing -> Inactive`に戻る (`rate[1m]`のため1~2分遅れて収束することがあります)
 
@@ -194,6 +219,7 @@ Thresholds（MVP既定）:
 * critical: `loss_spans/s > 200` for 60s
 
 Troubleshooting
+
 * `/targets`がUPなのに`rate(otelcol_receiver_accepted_spans[1m])`がEmpty
   * トレースが流れていない(telemetrygen実行、otelcol-gatewayのport-forward(4317)を確認)
 * `otelcol_loss_spans:rate1m)`がEmpty
@@ -202,7 +228,6 @@ Troubleshooting
   * config内のenv参照が不正(`{env:VAR:-default}`形式にする)
 
 詳細手順は [docs/runbooks/loss-alerts.md](docs/runbooks/loss-alerts.md) を参照してください。
-
 
 ## CI (example)
 
