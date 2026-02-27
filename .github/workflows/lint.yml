@@ -43,7 +43,11 @@ jobs:
           if git ls-files | grep -E '(^|/)Chart\.yaml$' -q; then has_helm=true; fi
           echo "has_helm=$has_helm" >> "$GITHUB_OUTPUT"
 
-          if grep -RInE '(:latest\b|tag:[[:space:]]*latest\b)' . \
+          # latest禁止（self-match回避のため "latest" は分割して作る）
+          latest='la'"test"
+          regex="(:${latest}([^A-Za-z0-9_.-]|$)|tag:[[:space:]]*${latest}([^A-Za-z0-9_.-]|$))"
+
+          if grep -RInE "$regex" . \
               --exclude-dir=.git \
               --exclude-dir=docs \
               --exclude='*.md' \
@@ -89,12 +93,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files="$(git ls-files '*.sh')"
-          if [ -z "$files" ]; then
+          mapfile -t files < <(git ls-files '*.sh')
+          if [ "${#files[@]}" -eq 0 ]; then
             echo "no shell scripts"
             exit 0
           fi
-          shellcheck -x $files
+          shellcheck -x "${files[@]}"
 
   go-test:
     name: go test/vet
