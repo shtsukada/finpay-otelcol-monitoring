@@ -1,19 +1,51 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "finpay-otelcol values schema",
   "type": "object",
+  "additionalProperties": true,
+
+  "definitions": {
+    "image": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "repository": { "type": "string" },
+        "tag": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "type": "string" }
+      },
+      "required": ["tag"]
+    },
+    "componentBase": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": { "$ref": "#/definitions/image" }
+      },
+      "required": ["enabled", "image"]
+    }
+  },
+
   "properties": {
     "otelcol": {
-      "type": "object",
-      "properties": {
-        "mode": { "type": "string", "enum": ["normal", "break"] },
-        "break": {
+      "allOf": [
+        { "$ref": "#/definitions/componentBase" },
+        {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
-            "tailSamplingPercentage": { "type": "number" }
-          }
+            "mode": {
+              "type": "string",
+              "enum": ["normal", "break"]
+            }
+          },
+          "required": ["mode"]
         }
-      },
-      "required": ["mode"]
-    }
+      ]
+    },
+
+    "prometheus": { "$ref": "#/definitions/componentBase" },
+    "tempo": { "$ref": "#/definitions/componentBase" },
+    "grafana": { "$ref": "#/definitions/componentBase" }
   }
 }
