@@ -28,6 +28,8 @@ spec:
         runAsUser: 10001
         runAsGroup: 10001
         fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
 
       containers:
         - name: tempo
@@ -35,6 +37,12 @@ spec:
           imagePullPolicy: {{ .Values.tempo.image.pullPolicy }}
           args:
             - "-config.file=/conf/tempo.yaml"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - All
+            runAsNonRoot: true
           ports:
             - name: http
               containerPort: {{ .Values.tempo.service.port }}

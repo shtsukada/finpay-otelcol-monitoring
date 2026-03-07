@@ -19,6 +19,9 @@ spec:
         app: loki
         {{- include "finpay.labels" . | nindent 8 }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: loki
           image: "{{ .Values.loki.image.repository }}:{{ .Values.loki.image.tag }}"
@@ -26,6 +29,12 @@ spec:
           args: ["-config.file=/etc/loki/config.yaml"]
           ports:
             - { name: http, containerPort: 3100 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - All
+            runAsNonRoot: true
           readinessProbe:
             httpGet:
               path: /ready

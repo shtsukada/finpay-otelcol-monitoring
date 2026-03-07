@@ -1,0 +1,213 @@
+{{- /*
+Egress 最小 NetworkPolicy(port-forward を壊しにくい方針)
+- Ingress は触らない
+- Egress を deny-by-default にして必要分だけ許可
+  - DNS (kube-system/coredns)
+  - grafana -> prometheus/tempo/loki
+  - prometheus -> otelcol-gateway (scrape)
+  - otelcol-gateway -> tempo (otlp grpc)
+*/ -}}
+
+{{- $name := include "finpay.name" . -}}
+
+{{- if .Values.grafana.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finpay.fullname" . }}-grafana-egress
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: grafana
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchExpressions:
+              - key: k8s-app
+                operator: In
+                values: ["kube-dns", "coredns"]
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # grafana -> prometheus
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: prometheus
+      ports:
+        - protocol: TCP
+          port: 9090
+    # grafana -> tempo (datasource: http)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: tempo
+      ports:
+        - protocol: TCP
+          port: 3200
+    # grafana -> loki (datasource: http)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: loki
+      ports:
+        - protocol: TCP
+          port: 3100
+{{- end }}
+
+{{- if .Values.prometheus.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finpay.fullname" . }}-prometheus-egress
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: prometheus
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchExpressions:
+              - key: k8s-app
+                operator: In
+                values: ["kube-dns", "coredns"]
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # prometheus -> otelcol-gateway (scrape metrics)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: otelcol-gateway
+      ports:
+        - protocol: TCP
+          port: 8888
+{{- end }}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finpay.fullname" . }}-otelcol-gateway-egress
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: otelcol-gateway
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchExpressions:
+              - key: k8s-app
+                operator: In
+                values: ["kube-dns", "coredns"]
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # otelcol-gateway -> tempo(OTLP gRPC)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: tempo
+      ports:
+        - protocol: TCP
+          port: 4317
+
+{{- if .Values.loki.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finpay.fullname" . }}-loki-egress
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: loki
+  policyTypes:
+    - Egress
+  egress:
+    # DNS only (lokiは基本outbound不要)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchExpressions:
+              - key: k8s-app
+                operator: In
+                values: ["kube-dns", "coredns"]
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- end }}
+
+{{- if .Values.tempo.enabled}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "finpay.fullname" . }}-tempo-egress
+  labels:
+    {{- include "finpay.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: tempo
+  policyTypes:
+    - Egress
+  egress:
+    # DNS only (tempoも基本outbound不要)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchExpressions:
+              - key: k8s-app
+                operator: In
+                values: ["kube-dns", "coredns"]
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- end }}
