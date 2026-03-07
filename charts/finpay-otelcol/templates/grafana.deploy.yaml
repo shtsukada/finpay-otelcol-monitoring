@@ -22,6 +22,9 @@ spec:
         checksum/grafana-dashboards: {{ include (print $.Template.BasePath "/grafana.dashboards.configmap.yaml") . | sha256sum }}
         {{- end }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: grafana
           image: "{{ .Values.grafana.image.repository }}:{{ .Values.grafana.image.tag }}"
@@ -29,6 +32,12 @@ spec:
           ports:
             - name: http
               containerPort: 3000
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
           env:
             - name: GF_SECURITY_ADMIN_USER
               value: {{ .Values.grafana.adminUser | quote }}

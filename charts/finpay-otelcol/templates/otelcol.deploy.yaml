@@ -17,6 +17,9 @@ spec:
         app: otelcol-gateway
         {{- include "finpay.labels" . | nindent 8 }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: otelcol
           image: "{{ .Values.otelcol.image.repository }}:{{ .Values.otelcol.image.tag }}"
@@ -27,6 +30,12 @@ spec:
             - { name: otlp-http, containerPort: 4318 }
             - { name: metrics, containerPort: 8888 }
             - { name: health, containerPort: 13133 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - All
+            runAsNonRoot: true
           env:
             - name: TEMPO_ENDPOINT
               value: {{ .Values.otelcol.exporters.tempo.endpoint }}

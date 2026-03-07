@@ -20,6 +20,9 @@ spec:
         app.kubernetes.io/component: prometheus
         {{- include "finpay.labels" . | nindent 8 }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: prometheus
           image: "{{ .Values.prometheus.image.repository }}:{{ .Values.prometheus.image.tag }}"
@@ -32,6 +35,12 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.prometheus.service.port | default 9090 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - All
+            runAsNonRoot: true
           volumeMounts:
             - name: config
               mountPath: /etc/prometheus
