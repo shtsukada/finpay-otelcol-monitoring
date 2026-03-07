@@ -41,6 +41,8 @@ spec:
               drop:
                 - All
             runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
           volumeMounts:
             - name: config
               mountPath: /etc/prometheus
