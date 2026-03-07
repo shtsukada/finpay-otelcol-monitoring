@@ -39,7 +39,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - All
+                - ALL
             runAsNonRoot: true
             runAsUser: 65534
             runAsGroup: 65534
